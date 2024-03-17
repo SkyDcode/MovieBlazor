@@ -1,0 +1,126 @@
+﻿@page "/save"
+@inject ILocalStorageService LocalStorage
+@inject SavedMovieService SavedMovieService
+@using Movies.Services
+@using Movies.Models
+@using Blazored.LocalStorage
+@using System.Text.Json
+
+<h3>Saved Movies</h3>
+
+@if (movies != null && movies.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>List of Movie(s)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < movies.Count; i++)
+            {
+                var movie = movies[i];
+                <tr>
+                    <td>
+                        @if (movieBeingEdited == movie.Id)
+                        {
+                            <input @bind="movie.Title" @bind:event="oninput" />
+                        }
+                        else
+                        {
+                            @movie.Title
+                            <br>
+                            <small>@movie.Overview</small>
+                        }
+                    </td>
+                    <td>
+                        @if (movieBeingEdited == movie.Id)
+                        {
+                            <button class="btn btn-success" @onclick="() => SaveMovieTitle(movie.Id, movie.Title)">Save</button>
+                            <button class="btn btn-secondary" @onclick="() => CancelEdit()">Cancel</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-primary" @onclick="() => EditMovie(movie.Id)">Edit</button>
+                            <button class="btn btn-danger" @onclick="() => RemoveMovie(movie.Id)">Remove</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No saved movies yet.</p>
+}
+
+@code {
+    private List<Movie> movies = new List<Movie>();
+    private int? movieBeingEdited;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMoviesAsync();
+    }
+
+    private async Task LoadMoviesAsync()
+    {
+        try
+        {
+            movies = await SavedMovieService.GetMoviesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load movies: {ex.Message}");
+            // Handle the error appropriately, e.g. show user-friendly message
+        }
+    }
+
+    private void EditMovie(int movieId)
+    {
+        movieBeingEdited = movieId;
+    }
+
+    private void CancelEdit()
+    {
+        movieBeingEdited = null;
+    }
+
+    private async Task SaveMovieTitle(int movieId, string newTitle)
+    {
+        var movie = movies.FirstOrDefault(m => m.Id == movieId);
+        if (movie != null)
+        {
+            movie.Title = newTitle;
+            await SaveMoviesAsync();
+        }
+        movieBeingEdited = null;
+    }
+
+    private async Task RemoveMovie(int movieId)
+    {
+        var movie = movies.FirstOrDefault(m => m.Id == movieId);
+        if (movie != null)
+        {
+            movies.Remove(movie);
+            await SaveMoviesAsync();
+        }
+    }
+
+    private async Task SaveMoviesAsync()
+    {
+        try
+        {
+            var moviesJson = JsonSerializer.Serialize(movies);
+            await LocalStorage.SetItemAsync("movies", moviesJson);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to save movies: {ex.Message}");
+            // Handle the error appropriately, e.g. show user-friendly message
+        }
+    }
+}
+

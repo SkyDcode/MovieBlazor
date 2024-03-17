@@ -1,0 +1,47 @@
+﻿@page "/Search"
+@inject MovieService MovieService
+@inject SavedMovieService SavedMovieService
+@using Movies.Models
+@using Movies.Services
+@using Blazored.LocalStorage;
+
+<PageTitle>Search a Movie</PageTitle>
+
+<h1>Search a movie</h1>
+
+<input type="text" @bind-value="search" placeholder="Enter a word" />
+<button @onclick="SearchMovies">Search</button>
+<br />
+
+@if (movies != null)
+{
+    <div class="row">
+        @foreach (var movie in movies)
+        {
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">@movie.Title</h5>
+                        <p class="card-text">@movie.Overview</p>
+                        <button class="btn btn-primary" @onclick="() => SaveMovieAsync(movie)">Save</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private string search;
+    private List<Movie> movies;
+
+    private async Task SearchMovies()
+    {
+        movies = await MovieService.SearchMoviesAsync(search);
+    }
+
+    private async Task SaveMovieAsync(Movie movie)
+    {
+        await SavedMovieService.SaveMovieAsync(movie);
+    }
+}
