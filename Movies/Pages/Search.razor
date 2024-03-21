@@ -11,7 +11,7 @@
 
 <input type="text" @bind-value="search" placeholder="Enter a word" />
 <button @onclick="SearchMovies">Search</button>
-<br />
+<br /><br />
 
 @if (movies != null)
 {
@@ -32,8 +32,8 @@
 }
 
 @code {
-    private string search;
-    private List<Movie> movies;
+    private string search = "";
+    private List<Movie> movies = new List<Movie>();
 
     private async Task SearchMovies()
     {

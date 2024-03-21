@@ -32,6 +32,7 @@ public class SaveComponentTests : TestContext
     [Fact]
     public async Task SaveComponentRendersEmptyStateWhenNoMovies()
     {
+        await Task.Yield();
         // Act
         var component = RenderComponent<Save>();
 
@@ -42,6 +43,7 @@ public class SaveComponentTests : TestContext
     [Fact]
     public async Task SaveComponentRendersMoviesCorrectly()
     {
+        await Task.Yield();
         // Arrange
         var localStorage = Services.GetRequiredService<ILocalStorageService>();
         var moviesList = new List<Movie>
