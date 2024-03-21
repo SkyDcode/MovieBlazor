@@ -4,30 +4,36 @@ using Moq;
 using Blazored.LocalStorage;
 using Movies.Services;
 using Movies.Models;
-using Movies.Pages;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Text.Json;
+using Movies.Pages;
+
 
 public class SaveComponentTests : TestContext
 {
     public SaveComponentTests()
     {
-        // Créer un mock pour ILocalStorageService
         var mockLocalStorage = new Mock<ILocalStorageService>();
+        var moviesList = new List<Movie>(); // Liste pour stocker les films simulés
 
-        // Configurer le mock pour renvoyer une liste vide pour GetItemAsync lorsqu'il est appelé avec "movies"
+        // Simuler GetItemAsync pour renvoyer la liste des films sérialisée
         mockLocalStorage.Setup(x => x.GetItemAsync<string>("movies", default))
-                        .ReturnsAsync(string.Empty);
+                        .ReturnsAsync(() => JsonSerializer.Serialize(moviesList));
 
-        // Configurer le mock pour gérer SetItemAsync lorsqu'il est appelé avec "movies"
-        mockLocalStorage.Setup(x => x.SetItemAsync<string>("movies", It.IsAny<string>(), default))
-                .Returns(new ValueTask()); // Utilisez ValueTask.CompletedTask si disponible
+        // Simuler SetItemAsync pour mettre à jour la liste des films simulés
+        mockLocalStorage.Setup(x => x.SetItemAsync("movies", It.IsAny<string>(), default))
+                        .Callback<string, string, CancellationToken>((key, value, token) =>
+                        {
+                            moviesList = JsonSerializer.Deserialize<List<Movie>>(value) ?? new List<Movie>();
+                        })
+                        .Returns(new ValueTask());
 
-        // Utiliser le mock dans les services
         Services.AddSingleton<ILocalStorageService>(mockLocalStorage.Object);
         Services.AddSingleton<SavedMovieService>();
     }
+
 
     [Fact]
     public async Task SaveComponentRendersEmptyStateWhenNoMovies()
@@ -41,30 +47,21 @@ public class SaveComponentTests : TestContext
     }
 
     [Fact]
-    public async Task SaveComponentRendersMoviesCorrectly()
+    public async Task SavedMovieService_AddsMovieCorrectly()
     {
-        await Task.Yield();
         // Arrange
-        var localStorage = Services.GetRequiredService<ILocalStorageService>();
-        var moviesList = new List<Movie>
-        {
-            new Movie { Id = 1, Title = "Inception", Overview = "A thief with the rare ability..." },
-            new Movie { Id = 2, Title = "The Matrix", Overview = "A computer hacker learns from mysterious rebels..." }
-        };
-
-        var moviesJson = System.Text.Json.JsonSerializer.Serialize(moviesList);
-
-        // Configurer le mock pour renvoyer `moviesJson` lors de l'appel à GetItemAsync
-        var mockLocalStorage = Mock.Get(localStorage);
-        mockLocalStorage.Setup(x => x.GetItemAsync<string>("movies", default))
-                        .ReturnsAsync(moviesJson);
+        var movieToAdd = new Movie { Id = 3, Title = "Interstellar", Overview = "A team of explorers travel through a wormhole in space..." };
+        var savedMovieService = Services.GetRequiredService<SavedMovieService>();
 
         // Act
-        var component = RenderComponent<Save>();
+        await savedMovieService.SaveMovieAsync(movieToAdd);
 
         // Assert
-        Assert.Equal(2, component.FindAll("tbody tr").Count); // Vérifier que deux films sont affichés
-        Assert.Contains("Inception", component.Markup);
-        Assert.Contains("The Matrix", component.Markup);
+        var savedMovies = await savedMovieService.GetMoviesAsync();
+        var savedMovie = savedMovies.FirstOrDefault(m => m.Id == movieToAdd.Id);
+
+        Assert.NotNull(savedMovie); // Vérifiez que le film est bien ajouté
+        Assert.Equal(movieToAdd.Title, savedMovie.Title); // Vérifiez que le titre du film ajouté est correct
+        Assert.Equal(movieToAdd.Overview, savedMovie.Overview); // Vérifiez que le résumé du film ajouté est correct
     }
 }

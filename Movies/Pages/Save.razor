@@ -55,7 +55,6 @@ else
 {
     <p>No saved movies yet.</p>
 }
-
 @code {
     private List<Movie> movies = new List<Movie>();
     private int? movieBeingEdited;
@@ -109,6 +108,12 @@ else
         }
     }
 
+    public async Task AddMovie(Movie movie)
+    {
+        movies.Add(movie);
+        await SaveMoviesAsync();
+    }
+
     private async Task SaveMoviesAsync()
     {
         try
@@ -123,4 +128,5 @@ else
         }
     }
 }
+
 

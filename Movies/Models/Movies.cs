@@ -4,7 +4,7 @@
     {
         public int Id { get; set; }
         public string Title { get; set; }
-        public string Overview { get; set; } // Un résumé du film
-  
+        public string Overview { get; set; } // Un résumé du film 
+
     }
 }
